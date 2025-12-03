@@ -1,22 +1,46 @@
-# RAG Travel Assistant with LangGraph & Observability
+# 🌍 RAG Travel Assistant with LangGraph & Observability
 
-A production-ready RAG (Retrieval Augmented Generation) powered travel assistant built with Qdrant vector search, Gemini LLM, LangGraph orchestration, FastAPI, and comprehensive observability through LangFuse and Datadog.
+A production-ready RAG (Retrieval Augmented Generation) powered travel assistant built with **Qdrant** vector search, **Gemini 2.0** LLM, **LangGraph** orchestration, **FastAPI**, and comprehensive observability through **LangFuse** and **Datadog**.
 
 ## 🌟 Features
 
-- **Hybrid Search**: Combines semantic (dense vectors) and keyword (sparse vectors) search for superior retrieval accuracy
-- **LangGraph Workflow**: Multi-step orchestrated pipeline with conditional routing
-- **Gemini Integration**: Powered by Google's Gemini 2.0 for natural language generation
+### Core Capabilities
+- **Advanced Hybrid Search**: 
+  - Combines semantic (dense vectors) and keyword (sparse vectors) search
+  - Country name boosting (3x weight) for accurate retrieval
+  - Minimum score threshold (0.45) to filter irrelevant results
+  - Reciprocal Rank Fusion (RRF) for optimal result ranking
+  
+- **LangGraph Workflow**: 
+  - Multi-step orchestrated pipeline with conditional routing
+  - 5 nodes: Input → Retrieval → Generation → Error → Output
+  - Async execution for optimal performance
+  
+- **Gemini 2.0 Flash Integration**: 
+  - Natural language generation with context awareness
+  - Token usage tracking for cost monitoring
+  - Configurable temperature and max tokens
+  - Simple, emoji-enhanced responses for better UX
+  
+- **Dual API Endpoints**:
+  - JSON endpoint with structured responses
+  - Plain text endpoint for proper line break rendering
+  
 - **Comprehensive Observability**: 
-  - LangFuse tracing for RAG pipeline visibility
-  - Datadog APM for application performance monitoring
-- **Travel Knowledge Base**: 15+ destinations with detailed information:
+  - **LangFuse**: RAG pipeline tracing, token tracking, cost monitoring
+  - **Datadog**: APM for application performance monitoring
+  
+- **Travel Knowledge Base**: 15 destinations with detailed information:
   - Visa requirements for Indian citizens
   - Processing times and required documents
   - Attractions and best time to visit
   - Climate, currency, and language information
-- **FastAPI Backend**: Production-ready REST API with automatic documentation
-- **Error Handling**: Comprehensive error handling and logging
+  
+- **Production-Ready**:
+  - FastAPI backend with automatic documentation
+  - Comprehensive error handling and logging
+  - Health check endpoints
+  - Environment-based configuration
 
 ## 📋 Prerequisites
 
@@ -30,8 +54,14 @@ A production-ready RAG (Retrieval Augmented Generation) powered travel assistant
 
 ### 1. Install Dependencies
 
+Using uv (recommended):
 ```bash
 uv sync
+```
+
+Or using pip:
+```bash
+pip install -r requirements.txt
 ```
 
 ### 2. Start Qdrant
@@ -45,19 +75,28 @@ Or use Qdrant Cloud and update `QDRANT_URL` in `.env`
 
 ### 3. Configure Environment Variables
 
-Edit `.env` file:
+Create a `.env` file in the project root:
 ```env
-# Required
+# Required - Gemini API
 GEMINI_API_KEY=your_gemini_api_key_here
 
-# Optional (for observability)
+# Required - Qdrant Configuration
+QDRANT_URL=http://localhost:6333
+QDRANT_COLLECTION_NAME=travel_destinations
+
+# Optional - LangFuse (for observability)
 LANGFUSE_PUBLIC_KEY=your_langfuse_public_key_here
 LANGFUSE_SECRET_KEY=your_langfuse_secret_key_here
+LANGFUSE_HOST=https://us.cloud.langfuse.com
+
+# Optional - Datadog (for APM)
 DATADOG_API_KEY=your_datadog_api_key_here
 DATADOG_APP_KEY=your_datadog_app_key_here
 
-# Qdrant Configuration
-QDRANT_URL=http://localhost:6333
+# Optional - Server Configuration
+APP_HOST=0.0.0.0
+APP_PORT=8000
+LOG_LEVEL=INFO
 ```
 
 ### 4. Load Travel Data into Qdrant
@@ -82,15 +121,15 @@ Once the server is running, visit:
 
 ### Key Endpoints
 
-#### POST `/api/v1/rag-travel-assistant`
+#### POST `/api/v1/rag-travel-assistant` (JSON Response)
 
-Query the travel assistant with any travel-related question.
+Query the travel assistant with any travel-related question. Returns JSON with structured response.
 
 **Request:**
 ```json
 {
   "query": "What are visa requirements for Indians traveling to Japan?",
-  "top_k": 5,
+  "top_k": 3,
   "return_sources": true
 }
 ```
@@ -98,18 +137,53 @@ Query the travel assistant with any travel-related question.
 **Response:**
 ```json
 {
-  "answer": "Visa Requirements for Indian Citizens Traveling to Japan:\n\n- **Visa Required**: Yes, a tourist visa is required\n- **Visa Type**: Tourist visa\n- **Processing Time**: 5-7 working days\n- **Stay Duration**: Up to 15 days\n- **Validity**: 90 days from date of issue\n\n**Required Documents**:\n- Valid passport (minimum 6 months validity)\n- Completed visa application form\n- Recent passport-size photograph\n- Flight itinerary\n- Hotel reservation or invitation letter\n- Bank statements (last 6 months)\n- Employment proof or business registration\n- Income tax returns\n\n**Additional Information**:\nJapan offers a unique blend of ancient traditions and modern innovation, with popular destinations including Tokyo, Kyoto, Osaka, and Hiroshima. The best time to visit is during Spring (March-May) for cherry blossoms or Autumn (September-November) for pleasant weather.",
+  "answer": "**Japan** 🌍\n\n**Do I need a visa?**\n• Yes - Tourist visa required for Indian citizens\n• Processing time: 5-7 working days\n• Stay duration: Up to 15 days\n\n**Required Documents:**\n✈️ Valid passport (6 months minimum validity)\n📄 Completed visa application form\n📸 Recent passport-size photograph\n✈️ Flight itinerary\n🏨 Hotel reservation or invitation letter\n💰 Bank statements (last 6 months)\n📋 Employment proof or business registration\n💵 Income tax returns\n\n**Best time to visit:**\n🌸 Spring (March-May) - Cherry blossoms\n🍂 Autumn (September-November) - Pleasant weather\n\n**Popular destinations:** Tokyo, Kyoto, Osaka, Hiroshima",
   "query": "What are visa requirements for Indians traveling to Japan?",
-  "sources_count": 3,
+  "sources_count": 1,
+  "usage": {
+    "model": "gemini-2.0-flash-exp",
+    "input_tokens": 450,
+    "output_tokens": 180,
+    "total_tokens": 630
+  },
   "sources": [
     {
       "country": "Japan",
       "title": "Japan Travel Guide",
-      "score": 0.95,
+      "score": 0.6247,
       "id": "dest_001"
     }
   ]
 }
+```
+
+#### POST `/api/v1/rag-travel-assistant/text` (Plain Text Response)
+
+Same as above but returns plain text with proper line breaks (no JSON escaping).
+
+**Request:**
+```json
+{
+  "query": "Tell me about visa requirements for Singapore",
+  "top_k": 2,
+  "return_sources": false
+}
+```
+
+**Response (Plain Text):**
+```
+**Singapore** 🌍
+
+**Do I need a visa?**
+• No visa required for Indian citizens
+• Visa-free entry for stays up to 30 days
+• Just need a valid passport
+
+**Best time to visit:**
+☀️ Year-round destination with tropical climate
+🎉 Visit during festivals for cultural experience
+
+**Popular attractions:** Marina Bay Sands, Gardens by the Bay, Sentosa Island
 ```
 
 #### GET `/api/v1/health`
@@ -175,59 +249,126 @@ Input → Retrieval → Generation → Output
 
 ### Hybrid Search Implementation
 
-The retriever combines:
-- **Dense Vectors**: Semantic similarity using sentence transformers (all-MiniLM-L6-v2)
-- **Sparse Vectors**: Keyword matching using term frequency
-- **Fusion**: Reciprocal Rank Fusion (RRF) to combine results
+The retriever combines multiple techniques for accurate results:
+
+- **Dense Vectors**: Semantic similarity using sentence transformers (all-MiniLM-L6-v2, 384 dimensions)
+- **Sparse Vectors**: Keyword matching using term frequency with country name boosting
+- **Country Boosting**: 3x weight for country keywords (Japan, Thailand, Singapore, etc.)
+- **Score Filtering**: Minimum score threshold of 0.45 to filter irrelevant results
+- **Fusion Strategy**: Reciprocal Rank Fusion (RRF) to combine results optimally
+- **Fallback**: Semantic-only search when hybrid search fails
+
+**Example:**
+Query: "Japan visa requirements" → Only returns Japan (score ~0.62), filters out irrelevant countries
 
 ## 🔍 Sample Queries
 
-Try these example queries:
+Try these example queries to see the RAG system in action:
 
+### Visa-Related Queries
 1. "What are visa requirements for Indians traveling to Japan?"
-2. "Best time to visit Switzerland?"
-3. "Which countries offer visa-free entry for Indian citizens?"
-4. "What documents do I need for a US tourist visa?"
-5. "Tell me about attractions in Thailand"
-6. "What is the climate like in Maldives?"
+2. "Which countries offer visa-free entry for Indian citizens?"
+3. "What documents do I need for a US tourist visa?"
+4. "How long does it take to process a Singapore visa?"
 
-## 📊 Observability
+### Travel Information
+5. "Best time to visit Switzerland?"
+6. "Tell me about attractions in Thailand"
+7. "What is the climate like in Maldives?"
+8. "What currency is used in Dubai?"
+
+### Comparative Queries
+9. "Compare visa requirements for Thailand and Maldives"
+10. "Which is better for beaches - Thailand or Bali?"
+
+### General Travel
+11. "What languages are spoken in France?"
+12. "Tell me about visiting Nepal from India"
+
+## 📊 Observability & Monitoring
 
 ### LangFuse Tracing
 
-All RAG operations are traced:
-- Retrieval steps (hybrid search)
-- Generation steps (LLM calls)
-- Complete pipeline execution
+All RAG operations are automatically traced with the `@observe` decorator:
 
-View traces in your LangFuse dashboard to:
-- Monitor retrieval quality
-- Track generation latency
-- Debug issues
-- Analyze user queries
+**Traces Created:**
+- `hybrid_retrieval` - Retrieval operations with query and results
+- `llm_generation` - LLM calls with token usage and costs
+- `rag_pipeline` - Complete end-to-end pipeline
+
+**Metrics Tracked:**
+- Token usage (input, output, total)
+- Model costs (calculated from token usage)
+- Query latency
+- Retrieval scores
+- Error rates
+
+**Setup LangFuse Cost Tracking:**
+
+1. **Configure Model Pricing in LangFuse Dashboard:**
+   - Go to: https://us.cloud.langfuse.com → Settings → Models
+   - Click "Add Model"
+   - Model ID: `gemini-2.0-flash-exp`
+   - Input cost: `$0.00001875` per 1K tokens
+   - Output cost: `$0.000075` per 1K tokens
+   - Save
+
+2. **Token Usage Auto-Tracked:**
+   - Code automatically captures token counts from Gemini API
+   - Sends to LangFuse with model name
+   - Costs calculated automatically based on pricing configuration
+
+**View in Dashboard:**
+- Traces: See all RAG pipeline executions
+- Model costs: View total spend and per-query costs
+- Scores: Add manual feedback scores or use API
 
 ### Datadog APM
 
-Application metrics and traces:
-- API endpoint performance
-- Error rates
-- Custom tags for queries
-- Service dependencies
+Application performance monitoring:
+- API endpoint latency and throughput
+- Error rates and stack traces
+- Custom tags for queries and operations
+- Service dependencies and traces
+- Resource utilization metrics
 
 ## 🧪 Testing
 
-Test the API using curl:
+### Using cURL
 
+**JSON Response:**
 ```bash
 curl -X POST "http://localhost:8000/api/v1/rag-travel-assistant" \
   -H "Content-Type: application/json" \
   -d '{
     "query": "What are visa requirements for Indians traveling to Japan?",
-    "top_k": 5
+    "top_k": 3,
+    "return_sources": true
   }'
 ```
 
-Or use the interactive Swagger UI at http://localhost:8000/docs
+**Plain Text Response:**
+```bash
+curl -X POST "http://localhost:8000/api/v1/rag-travel-assistant/text" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "query": "Tell me about Singapore visa requirements",
+    "top_k": 2
+  }'
+```
+
+**Health Check:**
+```bash
+curl http://localhost:8000/api/v1/health
+```
+
+### Using Swagger UI
+
+Visit http://localhost:8000/docs for interactive API documentation where you can:
+- Test all endpoints directly from the browser
+- See request/response schemas
+- View example requests
+- Download OpenAPI specification
 
 ## 📝 Logging
 
@@ -260,38 +401,93 @@ APP_PORT=8000
 LOG_LEVEL=INFO
 ```
 
-## 🎯 Assignment Rubric Coverage
+## 🎯 Assignment Tasks Completion
 
-### 1. Qdrant Setup ✅
-- Collection created with dense + sparse vectors
-- 15 travel destination documents loaded
-- Hybrid search configuration
+### Task 1: Qdrant Setup with Hybrid Search ✅
+- ✅ Collection created with dense vectors (384 dimensions)
+- ✅ Sparse vectors configured for keyword search
+- ✅ 15 travel destination documents loaded
+- ✅ Hybrid search configuration verified
+- **Location**: `app/rag/vector_store.py`, `scripts/ingest_data.py`
 
-### 2. Hybrid Search ✅
-- Semantic search using dense vectors
-- Keyword search using sparse vectors
-- RRF fusion for result combination
-- Accurate retrieval verified
+### Task 2: Hybrid Search Implementation ✅
+- ✅ Semantic search using dense vectors (sentence-transformers)
+- ✅ Keyword search using sparse vectors with TF weighting
+- ✅ Country name boosting (3x weight) for accuracy
+- ✅ RRF (Reciprocal Rank Fusion) for result combination
+- ✅ Minimum score threshold (0.45) to filter irrelevant results
+- ✅ Semantic fallback when hybrid search fails
+- ✅ Accurate retrieval verified (Japan query returns only Japan)
+- **Location**: `app/rag/retriever.py`
 
-### 3. RAG Pipeline ✅
-- Retrieval + generation integrated
-- Context formatting and prompt engineering
-- High-quality travel-specific answers
-- Error handling
+### Task 3: RAG Pipeline with Gemini ✅
+- ✅ Hybrid retrieval integrated
+- ✅ Context formatting with document metadata
+- ✅ Prompt engineering for travel-specific answers
+- ✅ Gemini 2.0 Flash integration
+- ✅ Token usage tracking for cost monitoring
+- ✅ Simple, emoji-enhanced response format
+- ✅ Error handling with graceful fallbacks
+- ✅ High-quality, accurate answers
+- **Location**: `app/rag/pipeline.py`
 
-### 4. LangFuse Integration ✅
-- Tracing decorators on all RAG steps
-- Retrieval traces
-- Generation traces
-- Pipeline-level traces
-- Visible in LangFuse dashboard
+### Task 4: LangFuse Integration ✅
+- ✅ LangFuse client initialized with credentials
+- ✅ `@observe` decorators on all RAG operations
+- ✅ Retrieval traces (`hybrid_retrieval`)
+- ✅ Generation traces (`llm_generation`) with token usage
+- ✅ Pipeline-level traces (`rag_pipeline`)
+- ✅ Model name and usage metadata sent to LangFuse
+- ✅ Traces visible in LangFuse dashboard
+- ✅ Cost tracking configured (requires model pricing setup)
+- **Location**: `app/observability/langfuse.py`, `app/rag/pipeline.py`
 
-### 5. FastAPI + LangGraph ✅
-- `/rag-travel-assistant` endpoint functional
-- LangGraph workflow with nodes and routing
-- RAG node integrated
-- Async support
-- Complete API documentation
+### Task 5: LangGraph Workflow ✅
+- ✅ StateGraph defined with proper state management
+- ✅ 5 nodes implemented:
+  - Input node (validation)
+  - Retrieval node (hybrid search with tracing)
+  - Generation node (LLM with tracing)
+  - Error node (error handling)
+  - Output node (formatting)
+- ✅ Conditional routing based on state
+- ✅ RAG pipeline integrated in generation node
+- ✅ Async execution support
+- **Location**: `app/graph/state.py`, `app/graph/nodes.py`, `app/graph/travel_assistant.py`
+
+### Task 6: FastAPI Endpoint ✅
+- ✅ `/api/v1/rag-travel-assistant` endpoint (JSON response)
+- ✅ `/api/v1/rag-travel-assistant/text` endpoint (plain text response)
+- ✅ LangGraph workflow integrated
+- ✅ Async route handler
+- ✅ Request validation with Pydantic
+- ✅ Error handling
+- ✅ Health check endpoint
+- ✅ Swagger UI documentation
+- ✅ ReDoc documentation
+- **Location**: `app/api/routes.py`, `main.py`
+
+## 📈 Additional Features Implemented
+
+### Enhanced User Experience
+- ✅ Dual response formats (JSON and plain text)
+- ✅ Emoji-enhanced responses for better readability
+- ✅ Structured format with clear sections
+- ✅ Simple, friendly language (max 300 words)
+
+### Production-Ready Features
+- ✅ Comprehensive logging (file + console)
+- ✅ Environment-based configuration
+- ✅ Health check endpoints
+- ✅ Error tracking and handling
+- ✅ Token usage monitoring
+- ✅ Cost tracking integration
+
+### Search Accuracy Improvements
+- ✅ Country name keyword boosting
+- ✅ Score threshold filtering
+- ✅ Semantic fallback mechanism
+- ✅ Query validation
 
 ## 🚨 Troubleshooting
 
@@ -307,10 +503,22 @@ LOG_LEVEL=INFO
 - Verify GEMINI_API_KEY is set correctly
 - Check API quota and billing
 
+## 📦 Repository
+
+**GitHub**: [https://github.com/chittivijay2003/travel-assistant-rag-datadog](https://github.com/chittivijay2003/travel-assistant-rag-datadog)
+
+Clone the repository:
+```bash
+git clone https://github.com/chittivijay2003/travel-assistant-rag-datadog.git
+cd travel-assistant-rag-datadog
+```
+
 ## 📄 License
 
 MIT
 
 ## 👥 Author
+
+**Chitti Vijay**
 
 Developed as part of GenAI Developer Assignment
