@@ -302,3 +302,7 @@ MIT
 **Chitti Vijay**
 
 GenAI Developer Assignment - Week 2
+
+## 🔗 Repository
+
+GitHub: [https://github.com/chittivijay2003/travel-assistant-rag-langfuse](https://github.com/chittivijay2003/travel-assistant-rag-langfuse)
