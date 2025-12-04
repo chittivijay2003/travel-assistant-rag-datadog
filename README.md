@@ -161,10 +161,10 @@ This will:
 
 ## 🏗️ Architecture
 
-### Project Structure
+## 📁 Project Structure
 
 ```
-travel-assistant-rag-datadog/
+travel-assistant-rag-langfuse/
 ├── main.py                 # FastAPI app with RAG + LangGraph workflow
 ├── test_main.py           # Comprehensive API tests (11 scenarios)
 ├── requirements.txt       # Python dependencies (pinned versions)
